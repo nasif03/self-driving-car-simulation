@@ -5,40 +5,87 @@ from utils import blit_rotate_center
 
 # pygame setup
 FPS = 60
+SWIDTH = 1280
+SHEIGHT = 720
 pygame.init()
-SCREEN = pygame.display.set_mode((1280, 720), vsync = 1)
+screen = pygame.display.set_mode((SWIDTH, SHEIGHT), vsync = 1)
 clock = pygame.time.Clock()
 
-class Car():
+def RotatePoint(point, origin, angle):
+    rad = math.radians(angle)
+    s = math.sin(rad)
+    c = math.cos(rad)
+
+    point.x -= origin.x
+    point.y -= origin.y
+    
+    xnew = point.x * c - point.y * s
+    ynew = point.x * s + point.y * c
+    
+    point.x = xnew + origin.x
+    point.y = ynew + origin.y
+
+class Polygon:
+    def __init__(self, points = []):
+        self.points = points
+        self.center = pygame.Vector2(SWIDTH / 2, SHEIGHT / 2)
+
+    def add_point(self, point):
+        self.points.append(point)
+    
+    def draw(self):
+        pygame.draw.polygon(screen, "BLACK", self.points, 1)
+
+    def rotate(self, angle):
+        for point in self.points:
+            RotatePoint(point, self.center, angle)
+    
+    def move(self, dir):
+        self.center.x += dir.x
+        self.center.y += dir.y
+        
+        for point in self.points:
+            point.x += dir.x
+            point.y += dir.y
+
+class Car:
     def __init__(self):
-        self.image = pygame.image.load('assets/car.png')
-        self.velocity = 0
-        self.angle = 0
-        self.x, self.y = 200, 200
+        self.poly = Polygon()
+        self.center = pygame.Vector2(SWIDTH / 2, SHEIGHT / 2)
 
-    def rotate(self, left=False, right=False):
-        if left:
-            self.angle += 3
-        elif right:
-            self.angle -= 3
+        self.poly.add_point(pygame.Vector2(self.center.x - 60, self.center.y - 40))
+        self.poly.add_point(pygame.Vector2(self.center.x - 60, self.center.y + 40))
+        self.poly.add_point(pygame.Vector2(self.center.x + 60, self.center.y + 40))
+        self.poly.add_point(pygame.Vector2(self.center.x + 60, self.center.y - 40))
 
-    def accelerate(self, acc):
-        self.velocity = min(self.velocity + acc, 10)
-        self.velocity = max(self.velocity, 0)
+        self.velocity = 0;
+        self.direction = 0;
 
-    def move(self):
-        rad = math.radians(self.angle)
-        vertical = math.cos(rad) * self.velocity
-        horizontal = math.sin(rad) * self.velocity
+    def draw(self):
+        self.poly.draw()
 
-        self.x += vertical
-        self.y -= horizontal
+    def update(self):
+        self.velocity = max(0, self.velocity - 0.1)
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w]:
+            self.velocity = min(self.velocity + 0.5, 7)
+        if keys[pygame.K_s]:
+            self.velocity = max(self.velocity - 0.5, 0)
+        if keys[pygame.K_a] and self.velocity > 0:
+            self.poly.rotate(-3)
+            self.direction -= 3
+        if keys[pygame.K_d] and self.velocity > 0:
+            self.poly.rotate(3)
+            self.direction += 3
 
-    def draw(self, surf):
-        blit_rotate_center(SCREEN, self.image, (self.x, self.y), self.angle)
+        dir = pygame.Vector2()
+        rad = math.radians(self.direction)
+        dir.x = self.velocity * math.cos(rad)
+        dir.y = self.velocity * math.sin(rad)
+        self.poly.move(dir)
 
 def main():
-    playerCar = Car()
+    car = Car()
 
     while True:
         clock.tick(FPS)
@@ -47,24 +94,13 @@ def main():
                 sys.exit(0)
 
         # update
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
-            playerCar.accelerate(0.3)
-        if keys[pygame.K_s]:
-            playerCar.accelerate(-0.3)
-        vel = playerCar.velocity
-        if vel != 0 and keys[pygame.K_a]:
-            playerCar.rotate(left = True)
-        if vel != 0 and keys[pygame.K_d]:
-            playerCar.rotate(right = True)
-        else:
-            playerCar.accelerate(-0.1)
-        playerCar.move()
+        car.update()
 
         # draw
-        SCREEN.fill("grey")
-        playerCar.draw(SCREEN)
-    
+        screen.fill("GRAY")
+
+        car.poly.draw()
+
         pygame.display.flip()
 
 if __name__ == "__main__":
