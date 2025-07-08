@@ -1,15 +1,18 @@
 import sys
 import math
 import pygame
+import pygame.surface
 from utils import blit_rotate_center
 
 # pygame setup
 FPS = 60
-SWIDTH = 1280
-SHEIGHT = 720
+SWIDTH = 1920
+SHEIGHT = 1080
 pygame.init()
 screen = pygame.display.set_mode((SWIDTH, SHEIGHT), vsync = 1)
 clock = pygame.time.Clock()
+background = pygame.image.load("assets/circle.png").convert_alpha()
+image_rect = background.get_rect(center=(SWIDTH // 2, SHEIGHT // 2))
 
 def RotatePoint(point, origin, angle):
     rad = math.radians(angle)
@@ -34,7 +37,7 @@ class Polygon:
         self.points.append(point)
     
     def draw(self):
-        pygame.draw.polygon(screen, "BLACK", self.points, 1)
+        pygame.draw.polygon(screen, "BLACK", self.points, 4)
 
     def rotate(self, angle):
         for point in self.points:
@@ -60,6 +63,20 @@ class Car:
 
         self.velocity = 0;
         self.direction = 0;
+
+    def check_collision(self):
+        for point in self.poly.points:
+            x, y = point
+            x = int(x)
+            y = int(y)
+
+            if image_rect.collidepoint(x, y):
+                x = x - image_rect.left
+                y = y - image_rect.top
+                pixel_color = background.get_at((x, y))
+                if pixel_color.a == 0:
+                    return False
+        return True
 
     def draw(self):
         self.poly.draw()
@@ -95,9 +112,13 @@ def main():
 
         # update
         car.update()
-
+        
         # draw
-        screen.fill("GRAY")
+        if car.check_collision():
+            screen.fill("WHITE")
+        else:
+            screen.fill("RED")
+        screen.blit(background, image_rect)
 
         car.poly.draw()
 
